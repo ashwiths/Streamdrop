@@ -1,0 +1,8 @@
+# System packages for the Railway build (Nixpacks)
+# ffmpeg is included for future audio conversion support
+
+[phases.setup]
+nixPkgs = ["ffmpeg"]
+
+[start]
+cmd = "npm start"
