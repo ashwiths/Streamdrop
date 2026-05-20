@@ -1,87 +1,44 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
-import { fileURLToPath } from 'url';
+/**
+ * ytdlpService.js
+ * 
+ * Uses @distube/ytdl-core — a pure JavaScript YouTube downloader.
+ * No Python or binary dependencies. Works on Vercel serverless.
+ */
 
-const execFileAsync = promisify(execFile);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ytDlpPath = path.resolve(__dirname, '../utils/yt-dlp');
+import ytdl from '@distube/ytdl-core';
 
+/**
+ * Fetches full video metadata for a given URL.
+ * @param {string} url - YouTube video URL
+ * @returns {Promise<object>} ytdl info object
+ */
 export const getVideoInfo = async (url) => {
   try {
-    const { stdout } = await execFileAsync(ytDlpPath, [
-      '-j', 
-      '--no-warnings', 
-      '--no-playlist', 
-      url
-    ]);
-    const info = JSON.parse(stdout);
+    console.log(`[ytdl] Fetching info: ${url}`);
+    const info = await ytdl.getInfo(url);
     return info;
   } catch (error) {
-    if (error.stderr) {
-      console.error('yt-dlp error:', error.stderr);
-      if (error.stderr.includes('Unsupported URL')) {
-        throw new Error('Unsupported URL or platform.');
-      }
+    console.error('[ytdl] getInfo error:', error.message);
+    if (
+      error.message.includes('No video id found') ||
+      error.message.includes('Video unavailable') ||
+      error.message.includes('Private video')
+    ) {
+      throw new Error('Unsupported URL, private, or unavailable video.');
     }
-    throw new Error('Failed to fetch video info or invalid URL.');
+    throw new Error('Failed to fetch video info.');
   }
 };
 
-import { spawn } from 'child_process';
-import os from 'os';
-import { randomUUID } from 'crypto';
-import fs from 'fs';
-
-export const downloadMediaToTemp = (url, formatId, type, quality) => {
-  return new Promise((resolve, reject) => {
-    const tempDir = os.tmpdir();
-    const uniqueId = randomUUID();
-    let tempFile = path.join(tempDir, `streamdrop_${uniqueId}`);
-    
-    // We don't set extension because yt-dlp will append it
-    let args = [
-      '--no-warnings',
-      '--no-playlist'
-    ];
-
-    if (type === 'audio') {
-      args.push('-f', 'bestaudio/best');
-      args.push('--extract-audio', '--audio-format', 'mp3');
-      if (quality) {
-        args.push('--audio-quality', quality); // e.g. 128K, 320K
-      }
-      tempFile += '.mp3';
-      args.push('-o', tempFile);
-    } else {
-      args.push('-f', formatId || 'best');
-      tempFile += '.%(ext)s';
-      args.push('-o', tempFile);
-    }
-    
-    args.push(url);
-
-    const ytDlpProcess = spawn(ytDlpPath, args);
-
-    ytDlpProcess.stderr.on('data', (data) => {
-      console.log('yt-dlp stderr:', data.toString());
-    });
-
-    ytDlpProcess.on('close', (code) => {
-      if (code === 0) {
-        // Find the actual file generated since yt-dlp appends the extension
-        fs.readdir(tempDir, (err, files) => {
-          if (err) return reject(err);
-          const generatedFile = files.find(f => f.startsWith(`streamdrop_${uniqueId}`));
-          if (generatedFile) {
-            resolve(path.join(tempDir, generatedFile));
-          } else {
-            reject(new Error('File not found after download'));
-          }
-        });
-      } else {
-        reject(new Error(`yt-dlp process exited with code ${code}`));
-      }
-    });
-  });
+/**
+ * Creates a readable stream for downloading media directly.
+ * No temp files — streams directly to HTTP response.
+ *
+ * @param {string} url - YouTube video URL
+ * @param {object} options - ytdl options (quality, filter, etc.)
+ * @returns {ReadableStream}
+ */
+export const createDownloadStream = (url, options = {}) => {
+  console.log(`[ytdl] Creating stream with options:`, options);
+  return ytdl(url, options);
 };
