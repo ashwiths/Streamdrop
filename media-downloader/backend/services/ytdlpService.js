@@ -1,44 +1,138 @@
 /**
  * ytdlpService.js
- * 
- * Uses @distube/ytdl-core — a pure JavaScript YouTube downloader.
- * No Python or binary dependencies. Works on Vercel serverless.
+ *
+ * Wraps the bundled utils/yt-dlp Python3 zipapp via child_process.
+ * No npm dependency on yt-dlp — the binary ships with the repo.
+ * Works on Railway (nixpacks installs python3) and locally.
  */
 
-import ytdl from '@distube/ytdl-core';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { chmodSync, existsSync } from 'fs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const YT_DLP_PATH = join(__dirname, '../utils/yt-dlp');
+
+// Prefer system python3; fall back to python
+const PYTHON_CMD = (() => {
+  // On Railway (Nixpacks), python3 is installed.
+  // On Windows, use 'python'. On all Unix-likes, use 'python3'.
+  return process.platform === 'win32' ? 'python' : 'python3';
+})();
+
+// Ensure the binary is executable (needed after git clone / Railway deploy)
+try {
+  if (existsSync(YT_DLP_PATH)) {
+    chmodSync(YT_DLP_PATH, 0o755);
+    console.log(`[ytdlp] Binary ready: ${YT_DLP_PATH} | python: ${PYTHON_CMD}`);
+  } else {
+    console.warn(`[ytdlp] Binary not found at: ${YT_DLP_PATH}`);
+  }
+} catch (e) {
+  console.warn('[ytdlp] Could not chmod binary:', e.message);
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Fetches full video metadata for a given URL.
- * @param {string} url - YouTube video URL
- * @returns {Promise<object>} ytdl info object
+ * Runs yt-dlp with the given args and returns { stdout, stderr }.
+ * Rejects on non-zero exit or spawn error.
+ * @param {string[]} args
+ * @param {number} [timeoutMs=30000]
+ */
+const runYtDlp = (args, timeoutMs = 30000) => {
+  return new Promise((resolve, reject) => {
+    console.log(`[ytdlp] spawn: python3 yt-dlp ${args.slice(0, 3).join(' ')} ...`);
+
+    const proc = spawn(PYTHON_CMD, [YT_DLP_PATH, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: timeoutMs,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    proc.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+
+    const timer = setTimeout(() => {
+      proc.kill('SIGKILL');
+      reject(new Error('yt-dlp timed out'));
+    }, timeoutMs);
+
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0 || stdout.trim()) {
+        resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+      } else {
+        const msg = stderr.trim() || `yt-dlp exited with code ${code}`;
+        reject(new Error(msg));
+      }
+    });
+
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      reject(new Error(`spawn error: ${err.message}`));
+    });
+  });
+};
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Fetches full video metadata for a given YouTube URL.
+ * Returns the parsed yt-dlp JSON object.
+ * @param {string} url
+ * @returns {Promise<object>}
  */
 export const getVideoInfo = async (url) => {
-  try {
-    console.log(`[ytdl] Fetching info: ${url}`);
-    const info = await ytdl.getInfo(url);
-    return info;
-  } catch (error) {
-    console.error('[ytdl] getInfo error:', error.message);
-    if (
-      error.message.includes('No video id found') ||
-      error.message.includes('Video unavailable') ||
-      error.message.includes('Private video')
-    ) {
-      throw new Error('Unsupported URL, private, or unavailable video.');
-    }
-    throw new Error('Failed to fetch video info.');
-  }
+  const { stdout } = await runYtDlp([
+    '--dump-json',
+    '--no-playlist',
+    '--no-warnings',
+    '--socket-timeout', '20',
+    url,
+  ], 45000);
+
+  const lines = stdout.split('\n').filter(Boolean);
+  // --dump-json outputs one JSON object per video; take the first
+  return JSON.parse(lines[0]);
 };
 
 /**
- * Creates a readable stream for downloading media directly.
- * No temp files — streams directly to HTTP response.
+ * Creates a child_process for streaming media directly to an HTTP response.
+ * The caller is responsible for piping proc.stdout → res.
  *
- * @param {string} url - YouTube video URL
- * @param {object} options - ytdl options (quality, filter, etc.)
- * @returns {ReadableStream}
+ * @param {string} url
+ * @param {'video'|'audio'} type
+ * @param {string} [formatId]   - yt-dlp format_id for specific quality
+ * @returns {ChildProcess}
  */
-export const createDownloadStream = (url, options = {}) => {
-  console.log(`[ytdl] Creating stream with options:`, options);
-  return ytdl(url, options);
+export const createDownloadStream = (url, type = 'video', formatId = null) => {
+  let formatSelector;
+
+  if (type === 'audio') {
+    // Best audio-only, prefer m4a for maximum compatibility
+    formatSelector = 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio';
+  } else if (formatId && formatId !== 'best') {
+    // Specific format — try the requested id, fall back to best single-stream mp4
+    formatSelector = `${formatId}+bestaudio[ext=m4a]/${formatId}/best[ext=mp4]/best`;
+  } else {
+    // Default: best single-stream (no merge required, lowest friction on Railway)
+    formatSelector = 'best[ext=mp4]/best[ext=webm]/best';
+  }
+
+  const args = [
+    YT_DLP_PATH,
+    '-f', formatSelector,
+    '--no-playlist',
+    '--no-warnings',
+    '--socket-timeout', '20',
+    '-o', '-',   // stream to stdout
+    url,
+  ];
+
+  console.log(`[ytdlp] Stream: type=${type} format=${formatSelector}`);
+  return spawn(PYTHON_CMD, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 };

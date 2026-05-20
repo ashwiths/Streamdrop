@@ -1,5 +1,16 @@
-import ytdl from '@distube/ytdl-core';
+/**
+ * downloadController.js
+ *
+ * Handles:
+ *   POST /api/download/info  → metadata extraction
+ *   POST /api/download/file  → streaming download
+ *
+ * YouTube: uses bundled yt-dlp via ytdlpService.js
+ * Images / direct URLs: fetched and proxied via Node fetch
+ */
+
 import { isValidUrl } from '../utils/helper.js';
+import { getVideoInfo, createDownloadStream } from '../services/ytdlpService.js';
 
 // ─── URL Type Helpers ─────────────────────────────────────────────────────────
 
@@ -44,10 +55,21 @@ const getMimeType = (ext) => {
   return map[ext] || 'application/octet-stream';
 };
 
+// ─── Format Seconds → "H:MM:SS" or "M:SS" ────────────────────────────────────
+const formatDuration = (totalSec) => {
+  if (!totalSec) return '0:00';
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = Math.floor(totalSec % 60);
+  return h > 0
+    ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    : `${m}:${s.toString().padStart(2, '0')}`;
+};
+
 // ─── Generic URL Proxy ────────────────────────────────────────────────────────
 /**
- * Fetches a URL and streams it directly to the Express response.
- * Used for direct image/video/audio file downloads.
+ * Fetches a direct URL and streams it to the Express response.
+ * Used for images, direct video/audio file links.
  */
 const proxyStream = async (url, res, filename) => {
   console.log(`[proxy] Streaming: ${url}`);
@@ -81,7 +103,7 @@ const proxyStream = async (url, res, filename) => {
   });
 };
 
-// ─── Controller: GET /api/download/info ──────────────────────────────────────
+// ─── Controller: POST /api/download/info ──────────────────────────────────────
 export const getMediaInfo = async (req, res) => {
   try {
     const { url } = req.body;
@@ -93,50 +115,74 @@ export const getMediaInfo = async (req, res) => {
 
     // ── YouTube ──────────────────────────────────────────────────────────────
     if (isYouTubeUrl(url)) {
-      const info = await ytdl.getInfo(url);
-      const details = info.videoDetails;
+      let info;
+      try {
+        info = await getVideoInfo(url);
+      } catch (ytErr) {
+        console.error('[getMediaInfo] yt-dlp error:', ytErr.message);
+        return res.status(422).json({
+          success: false,
+          error: `Could not fetch video info: ${ytErr.message}`,
+        });
+      }
+
+      // ── Parse formats from yt-dlp JSON ───────────────────────────────────
+      const rawFormats = info.formats || [];
 
       const videoFormats = [];
       const audioFormats = [];
+      const seen = new Set();
 
-      info.formats.forEach((f) => {
+      rawFormats.forEach((f) => {
+        const hasVideo = f.vcodec && f.vcodec !== 'none';
+        const hasAudio = f.acodec && f.acodec !== 'none';
+        const quality = f.height ? `${f.height}p` : (f.format_note || f.format_id);
+
         const formatObj = {
-          format_id: f.itag.toString(),
-          quality: f.qualityLabel || f.audioQuality || 'Unknown',
-          ext: f.container || 'mp4',
-          filesize: f.contentLength ? parseInt(f.contentLength) : null,
-          vcodec: f.hasVideo ? (f.videoCodec || 'h264') : 'none',
-          acodec: f.hasAudio ? (f.audioCodec || 'aac') : 'none',
+          format_id: f.format_id,
+          quality,
+          ext: f.ext || 'mp4',
+          filesize: f.filesize || f.filesize_approx || null,
+          vcodec: f.vcodec || 'none',
+          acodec: f.acodec || 'none',
+          fps: f.fps || null,
         };
-        if (f.hasVideo) videoFormats.push({ ...formatObj, type: 'video' });
-        else if (f.hasAudio) audioFormats.push({ ...formatObj, type: 'audio' });
+
+        if (hasVideo && hasAudio) {
+          // Single-stream (video+audio combined) — most compatible
+          if (!seen.has(quality)) {
+            seen.add(quality);
+            videoFormats.push({ ...formatObj, type: 'video' });
+          }
+        } else if (hasVideo && !hasAudio) {
+          // Video-only (needs merge) — still list for advanced users
+          if (!seen.has(`v-${quality}`)) {
+            seen.add(`v-${quality}`);
+            videoFormats.push({ ...formatObj, type: 'video' });
+          }
+        } else if (!hasVideo && hasAudio) {
+          audioFormats.push({ ...formatObj, type: 'audio' });
+        }
       });
 
-      // Deduplicate by quality, sorted highest first
-      const seen = new Set();
-      const uniqueVideo = videoFormats
-        .filter((f) => { if (seen.has(f.quality)) return false; seen.add(f.quality); return true; })
-        .sort((a, b) => (parseInt(b.quality) || 0) - (parseInt(a.quality) || 0));
+      // Sort video by resolution descending
+      videoFormats.sort((a, b) => (parseInt(b.quality) || 0) - (parseInt(a.quality) || 0));
 
-      const totalSec = parseInt(details.lengthSeconds || 0);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      const duration = h > 0
-        ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-        : `${m}:${s.toString().padStart(2, '0')}`;
+      const thumbnail =
+        (info.thumbnails && info.thumbnails[info.thumbnails.length - 1]?.url) ||
+        info.thumbnail || '';
 
-      const thumbnail = details.thumbnails?.[details.thumbnails.length - 1]?.url || '';
-
-      console.log(`[getMediaInfo] YouTube OK — "${details.title}" | ${info.formats.length} formats`);
+      console.log(`[getMediaInfo] YouTube OK — "${info.title}" | ${videoFormats.length} video, ${audioFormats.length} audio formats`);
 
       return res.status(200).json({
         success: true,
         platform: 'youtube',
-        title: details.title || '',
+        title: info.title || '',
         thumbnail,
-        duration,
-        formats: { video: uniqueVideo, audio: audioFormats },
+        duration: formatDuration(info.duration),
+        uploader: info.uploader || info.channel || '',
+        view_count: info.view_count || null,
+        formats: { video: videoFormats, audio: audioFormats },
       });
     }
 
@@ -144,25 +190,26 @@ export const getMediaInfo = async (req, res) => {
     if (isDirectMediaUrl(url)) {
       const ext = getExtensionFromUrl(url);
       const isImage = IMAGE_EXTS.has(ext);
+      const isAudio = AUDIO_EXTS.has(ext);
       const filename = url.split('/').pop().split('?')[0] || `download.${ext}`;
 
       console.log(`[getMediaInfo] Direct file — ext=${ext} | file=${filename}`);
 
       return res.status(200).json({
         success: true,
-        platform: isImage ? 'image' : 'direct',
+        platform: isImage ? 'image' : (isAudio ? 'audio' : 'direct'),
         title: filename,
         thumbnail: isImage ? url : '',
         duration: '',
         formats: {
-          video: isImage ? [] : [{
+          video: (!isImage && !isAudio) ? [{
             format_id: 'direct',
             quality: 'Original',
             ext,
             filesize: null,
             type: 'video',
-          }],
-          audio: AUDIO_EXTS.has(ext) ? [{
+          }] : [],
+          audio: isAudio ? [{
             format_id: 'direct',
             quality: 'Original',
             ext,
@@ -187,7 +234,7 @@ export const getMediaInfo = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[getMediaInfo] Error:', error.message);
+    console.error('[getMediaInfo] Unexpected error:', error.message);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch media info.',
@@ -214,41 +261,55 @@ export const downloadFile = async (req, res) => {
 
     const timestamp = Date.now();
 
-    // ── YouTube Download ──────────────────────────────────────────────────────
+    // ── YouTube Download via yt-dlp ───────────────────────────────────────────
     if (isYouTubeUrl(url)) {
-      let stream;
-      let filename;
-      let contentType;
-
-      if (type === 'audio') {
-        stream = ytdl(url, { quality: 'highestaudio', filter: 'audioonly' });
-        filename = `${safeTitle}_${timestamp}.m4a`;
-        contentType = 'audio/mp4';
-      } else {
-        const opts = format
-          ? { quality: format }
-          : { quality: 'highest', filter: 'audioandvideo' };
-        stream = ytdl(url, opts);
-        filename = `${safeTitle}_${timestamp}.${ext || 'mp4'}`;
-        contentType = 'video/mp4';
-      }
+      const downloadType = type === 'audio' ? 'audio' : 'video';
+      const fileExt = downloadType === 'audio' ? 'm4a' : (ext || 'mp4');
+      const contentType = downloadType === 'audio' ? 'audio/mp4' : 'video/mp4';
+      const filename = `${safeTitle}_${timestamp}.${fileExt}`;
 
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Type', contentType);
       res.setHeader('Transfer-Encoding', 'chunked');
       res.setHeader('Cache-Control', 'no-store');
 
-      console.log(`[downloadFile] YouTube stream → ${filename}`);
+      console.log(`[downloadFile] Starting yt-dlp stream → ${filename}`);
 
-      stream.on('error', (err) => {
-        console.error('[downloadFile] ytdl stream error:', err.message);
+      // Spawn yt-dlp streaming process
+      const proc = createDownloadStream(url, downloadType, format);
+
+      let stderrBuf = '';
+      proc.stderr.on('data', (chunk) => {
+        stderrBuf += chunk.toString();
+      });
+
+      // Pipe yt-dlp stdout directly to HTTP response
+      proc.stdout.pipe(res);
+
+      // Handle process exit
+      proc.on('close', (code) => {
+        if (code !== 0 && !res.headersSent) {
+          console.error(`[downloadFile] yt-dlp exited ${code}: ${stderrBuf.slice(-500)}`);
+        } else if (code !== 0) {
+          console.error(`[downloadFile] yt-dlp exited ${code} after headers sent`);
+        } else {
+          console.log(`[downloadFile] Complete: ${filename}`);
+        }
+      });
+
+      proc.on('error', (err) => {
+        console.error('[downloadFile] spawn error:', err.message);
         if (!res.headersSent) {
           res.status(500).json({ error: 'Stream failed.', message: err.message });
         }
       });
 
-      stream.on('end', () => console.log(`[downloadFile] Complete: ${filename}`));
-      return stream.pipe(res);
+      // Clean up if client disconnects
+      res.on('close', () => {
+        try { proc.kill('SIGTERM'); } catch (_) {}
+      });
+
+      return; // response handled by pipe
     }
 
     // ── Direct Image / File Download ──────────────────────────────────────────
@@ -259,7 +320,7 @@ export const downloadFile = async (req, res) => {
       return await proxyStream(url, res, filename);
     }
 
-    // ── Unsupported URL Fallback ──────────────────────────────────────────────
+    // ── Unsupported URL ───────────────────────────────────────────────────────
     return res.status(422).json({
       success: false,
       error: 'Cannot download this URL. Supported: YouTube, direct image/video/audio links.',
