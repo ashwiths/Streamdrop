@@ -1,10 +1,17 @@
 import axios from 'axios';
 
+// ─── API Base URL ─────────────────────────────────────────────────────────────
+// In production (Vercel), set VITE_API_URL in Vercel → Project → Environment Variables.
+// Example value: https://your-app.railway.app/api
+// Locally, this falls back to http://localhost:5000/api
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30s timeout for info requests
 });
 
 export const fetchVideoInfo = async (url) => {
@@ -15,15 +22,22 @@ export const fetchVideoInfo = async (url) => {
     if (error.response) {
       throw new Error(error.response.data.error || 'Failed to fetch video information.');
     }
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timed out. The server took too long to respond.');
+    }
     throw new Error('Network error or server is down. Please try again.');
   }
 };
 
 export const downloadMediaFile = async (url, formatId, ext, type, quality, title) => {
   try {
-    const response = await api.post('/download/file', 
-      { url, format: formatId, ext, type, quality, title }, 
-      { responseType: 'blob' }
+    const response = await api.post(
+      '/download/file',
+      { url, format: formatId, ext, type, quality, title },
+      {
+        responseType: 'blob',
+        timeout: 120000, // 2 min timeout for file downloads
+      }
     );
     return response.data;
   } catch (error) {
@@ -35,6 +49,9 @@ export const downloadMediaFile = async (url, formatId, ext, type, quality, title
       } catch (e) {
         throw new Error('Failed to download file.');
       }
+    }
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Download timed out. Try a lower quality format.');
     }
     throw new Error('Network error during download.');
   }
