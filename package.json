@@ -1,0 +1,14 @@
+{
+  "name": "streamdrop-root",
+  "version": "1.0.0",
+  "description": "Streamdrop root package for Railway Nixpacks detection",
+  "private": true,
+  "engines": {
+    "node": ">=18.x"
+  },
+  "scripts": {
+    "install": "cd media-downloader/backend && npm install",
+    "build": "cd media-downloader/backend && npm run build",
+    "start": "cd media-downloader/backend && npm start"
+  }
+}
