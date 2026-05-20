@@ -2,13 +2,9 @@
 # Installs system packages needed by yt-dlp and ffmpeg.
 
 [phases.setup]
-# python3: required to run the bundled utils/yt-dlp zipapp
-# ffmpeg:  required for yt-dlp to merge video+audio streams
-nixPkgs = ["python3", "ffmpeg"]
-
-[phases.install]
-# Make the bundled yt-dlp binary executable after Railway clones the repo
-cmds = ["chmod +x utils/yt-dlp || true", "npm ci --omit=dev"]
+# python3 and ffmpeg: required by yt-dlp to merge video+audio streams
+# yt-dlp: native binary from nixpkgs
+nixPkgs = ["python3", "ffmpeg", "yt-dlp"]
 
 [start]
 cmd = "node server.js"
