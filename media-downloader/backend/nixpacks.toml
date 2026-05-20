@@ -1,10 +1,14 @@
-# nixpacks.toml — Railway build configuration
-# Installs system packages needed by yt-dlp and ffmpeg.
+providers = ["node"]
 
 [phases.setup]
-# python3 and ffmpeg: required by yt-dlp to merge video+audio streams
-# yt-dlp: native binary from nixpkgs
-nixPkgs = ["python3", "ffmpeg", "yt-dlp"]
+nixPkgs = ["python3", "ffmpeg", "curl"]
+
+[phases.build]
+cmds = [
+  "npm run build",
+  "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o yt-dlp",
+  "chmod a+rx yt-dlp"
+]
 
 [start]
 cmd = "node server.js"

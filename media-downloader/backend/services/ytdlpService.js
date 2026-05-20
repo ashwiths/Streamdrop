@@ -7,8 +7,11 @@
  */
 
 import { spawn } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
-const YT_DLP_CMD = 'yt-dlp';
+const localBinaryPath = join(process.cwd(), 'yt-dlp');
+const YT_DLP_CMD = existsSync(localBinaryPath) ? localBinaryPath : 'yt-dlp';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
