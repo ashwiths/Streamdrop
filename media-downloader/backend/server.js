@@ -29,6 +29,7 @@ const corsOptions = {
     // Allow requests with no origin (curl, Postman, mobile apps, same-host)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
     console.warn(`[CORS] Blocked: ${origin}`);
     callback(new Error(`CORS: origin "${origin}" not allowed`));
   },
