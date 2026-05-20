@@ -7,31 +7,8 @@
  */
 
 import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { chmodSync, existsSync } from 'fs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const YT_DLP_PATH = join(__dirname, '../utils/yt-dlp');
-
-// Prefer system python3; fall back to python
-const PYTHON_CMD = (() => {
-  // On Railway (Nixpacks), python3 is installed.
-  // On Windows, use 'python'. On all Unix-likes, use 'python3'.
-  return process.platform === 'win32' ? 'python' : 'python3';
-})();
-
-// Ensure the binary is executable (needed after git clone / Railway deploy)
-try {
-  if (existsSync(YT_DLP_PATH)) {
-    chmodSync(YT_DLP_PATH, 0o755);
-    console.log(`[ytdlp] Binary ready: ${YT_DLP_PATH} | python: ${PYTHON_CMD}`);
-  } else {
-    console.warn(`[ytdlp] Binary not found at: ${YT_DLP_PATH}`);
-  }
-} catch (e) {
-  console.warn('[ytdlp] Could not chmod binary:', e.message);
-}
+const YT_DLP_CMD = 'yt-dlp';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,9 +20,9 @@ try {
  */
 const runYtDlp = (args, timeoutMs = 30000) => {
   return new Promise((resolve, reject) => {
-    console.log(`[ytdlp] spawn: python3 yt-dlp ${args.slice(0, 3).join(' ')} ...`);
+    console.log(`[ytdlp] spawn: ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
 
-    const proc = spawn(PYTHON_CMD, [YT_DLP_PATH, ...args], {
+    const proc = spawn(YT_DLP_CMD, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: timeoutMs,
     });
@@ -124,7 +101,6 @@ export const createDownloadStream = (url, type = 'video', formatId = null) => {
   }
 
   const args = [
-    YT_DLP_PATH,
     '-f', formatSelector,
     '--no-playlist',
     '--no-warnings',
@@ -134,5 +110,5 @@ export const createDownloadStream = (url, type = 'video', formatId = null) => {
   ];
 
   console.log(`[ytdlp] Stream: type=${type} format=${formatSelector}`);
-  return spawn(PYTHON_CMD, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  return spawn(YT_DLP_CMD, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 };
