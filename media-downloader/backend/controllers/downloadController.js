@@ -148,6 +148,7 @@ export const getMediaInfo = async (req, res) => {
             error: `Could not fetch video info: ${ytErr.message}`,
           });
         }
+      }
 
       // ── Parse formats from yt-dlp JSON ───────────────────────────────────
       const rawFormats = info.formats || [];
