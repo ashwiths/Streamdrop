@@ -5,9 +5,7 @@ nixPkgs = ["ffmpeg", "curl"]
 
 [phases.build]
 cmds = [
-  "cd media-downloader/backend && npm ci",
-  "cd media-downloader/backend && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o yt-dlp",
-  "cd media-downloader/backend && chmod a+rx yt-dlp"
+  "cd media-downloader/backend && npm ci"
 ]
 
 [start]

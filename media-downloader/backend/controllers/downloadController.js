@@ -11,6 +11,9 @@
 
 import { isValidUrl } from '../utils/helper.js';
 import { getVideoInfo, createDownloadStream } from '../services/ytdlpService.js';
+import { getCobaltInfo, getCobaltStreamUrl } from '../services/cobaltService.js';
+
+const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
 
 // ─── URL Type Helpers ─────────────────────────────────────────────────────────
 
@@ -116,15 +119,35 @@ export const getMediaInfo = async (req, res) => {
     // ── YouTube ──────────────────────────────────────────────────────────────
     if (isYouTubeUrl(url)) {
       let info;
-      try {
-        info = await getVideoInfo(url);
-      } catch (ytErr) {
-        console.error('[getMediaInfo] yt-dlp error:', ytErr.message);
-        return res.status(422).json({
-          success: false,
-          error: `Could not fetch video info: ${ytErr.message}`,
-        });
-      }
+      
+      if (isProduction) {
+        // PRODUCTION: Pure HTTP extraction via Cobalt & oEmbed
+        try {
+          info = await getCobaltInfo(url);
+          console.log(`[getMediaInfo] Cobalt extraction OK — "${info.title}"`);
+          return res.status(200).json({
+            success: true,
+            platform: 'youtube',
+            ...info
+          });
+        } catch (cobaltErr) {
+          console.error('[getMediaInfo] Cobalt error:', cobaltErr.message);
+          return res.status(422).json({
+            success: false,
+            error: `Could not fetch video info: ${cobaltErr.message}`,
+          });
+        }
+      } else {
+        // LOCAL DEVELOPMENT: yt-dlp binary
+        try {
+          info = await getVideoInfo(url);
+        } catch (ytErr) {
+          console.error('[getMediaInfo] yt-dlp error:', ytErr.message);
+          return res.status(422).json({
+            success: false,
+            error: `Could not fetch video info: ${ytErr.message}`,
+          });
+        }
 
       // ── Parse formats from yt-dlp JSON ───────────────────────────────────
       const rawFormats = info.formats || [];
@@ -261,55 +284,73 @@ export const downloadFile = async (req, res) => {
 
     const timestamp = Date.now();
 
-    // ── YouTube Download via yt-dlp ───────────────────────────────────────────
+    // ── YouTube Download ───────────────────────────────────────────
     if (isYouTubeUrl(url)) {
       const downloadType = type === 'audio' ? 'audio' : 'video';
       const fileExt = downloadType === 'audio' ? 'm4a' : (ext || 'mp4');
       const contentType = downloadType === 'audio' ? 'audio/mp4' : 'video/mp4';
       const filename = `${safeTitle}_${timestamp}.${fileExt}`;
 
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Transfer-Encoding', 'chunked');
-      res.setHeader('Cache-Control', 'no-store');
-
-      console.log(`[downloadFile] Starting yt-dlp stream → ${filename}`);
-
-      // Spawn yt-dlp streaming process
-      const proc = createDownloadStream(url, downloadType, format);
-
-      let stderrBuf = '';
-      proc.stderr.on('data', (chunk) => {
-        stderrBuf += chunk.toString();
-      });
-
-      // Pipe yt-dlp stdout directly to HTTP response
-      proc.stdout.pipe(res);
-
-      // Handle process exit
-      proc.on('close', (code) => {
-        if (code !== 0 && !res.headersSent) {
-          console.error(`[downloadFile] yt-dlp exited ${code}: ${stderrBuf.slice(-500)}`);
-        } else if (code !== 0) {
-          console.error(`[downloadFile] yt-dlp exited ${code} after headers sent`);
+      if (isProduction) {
+        // PRODUCTION: Use Cobalt direct stream proxy
+        console.log(`[downloadFile] Starting Cobalt stream proxy → ${filename}`);
+        // For format matching, we use the original format sent by the frontend (e.g. '1080p')
+        // We look for the quality label if available, but the frontend currently sends format id like 'cobalt-1080'
+        let qualityLabel = '';
+        if (format && format.includes('cobalt-')) {
+            qualityLabel = format.replace('cobalt-', '') + (type === 'video' ? 'p' : 'kbps');
         } else {
-          console.log(`[downloadFile] Complete: ${filename}`);
+            // If they sent raw quality param
+            qualityLabel = req.body.quality || '';
         }
-      });
+        
+        const streamUrl = await getCobaltStreamUrl(url, downloadType, qualityLabel);
+        return await proxyStream(streamUrl, res, filename);
+      } else {
+        // LOCAL DEV: yt-dlp spawn
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.setHeader('Cache-Control', 'no-store');
 
-      proc.on('error', (err) => {
-        console.error('[downloadFile] spawn error:', err.message);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Stream failed.', message: err.message });
-        }
-      });
+        console.log(`[downloadFile] Starting yt-dlp stream → ${filename}`);
 
-      // Clean up if client disconnects
-      res.on('close', () => {
-        try { proc.kill('SIGTERM'); } catch (_) {}
-      });
+        // Spawn yt-dlp streaming process
+        const proc = createDownloadStream(url, downloadType, format);
 
-      return; // response handled by pipe
+        let stderrBuf = '';
+        proc.stderr.on('data', (chunk) => {
+          stderrBuf += chunk.toString();
+        });
+
+        // Pipe yt-dlp stdout directly to HTTP response
+        proc.stdout.pipe(res);
+
+        // Handle process exit
+        proc.on('close', (code) => {
+          if (code !== 0 && !res.headersSent) {
+            console.error(`[downloadFile] yt-dlp exited ${code}: ${stderrBuf.slice(-500)}`);
+          } else if (code !== 0) {
+            console.error(`[downloadFile] yt-dlp exited ${code} after headers sent`);
+          } else {
+            console.log(`[downloadFile] Complete: ${filename}`);
+          }
+        });
+
+        proc.on('error', (err) => {
+          console.error('[downloadFile] spawn error:', err.message);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Stream failed.', message: err.message });
+          }
+        });
+
+        // Clean up if client disconnects
+        res.on('close', () => {
+          try { proc.kill('SIGTERM'); } catch (_) {}
+        });
+
+        return; // response handled by pipe
+      }
     }
 
     // ── Direct Image / File Download ──────────────────────────────────────────

@@ -13,6 +13,8 @@ import { join } from 'path';
 const localBinaryPath = join(process.cwd(), 'yt-dlp');
 const YT_DLP_CMD = existsSync(localBinaryPath) ? localBinaryPath : 'yt-dlp';
 
+const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -22,6 +24,10 @@ const YT_DLP_CMD = existsSync(localBinaryPath) ? localBinaryPath : 'yt-dlp';
  * @param {number} [timeoutMs=30000]
  */
 const runYtDlp = (args, timeoutMs = 30000) => {
+  if (isProduction) {
+    return Promise.reject(new Error("yt-dlp execution is disabled in production. Use cobaltService instead."));
+  }
+
   return new Promise((resolve, reject) => {
     console.log(`[ytdlp] spawn: ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
 
@@ -90,6 +96,10 @@ export const getVideoInfo = async (url) => {
  * @returns {ChildProcess}
  */
 export const createDownloadStream = (url, type = 'video', formatId = null) => {
+  if (isProduction) {
+    throw new Error("yt-dlp execution is disabled in production. Use cobaltService instead.");
+  }
+
   let formatSelector;
 
   if (type === 'audio') {
