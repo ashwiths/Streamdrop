@@ -1,7 +1,7 @@
 {
   "name": "media-downloader-backend",
-  "version": "0.1.0",
-  "description": "Backend engine for media downloader",
+  "version": "1.0.0",
+  "description": "StreamDrop backend — serverless-compatible media downloader API",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -9,11 +9,15 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@distube/ytdl-core": "^4.16.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.2"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }
