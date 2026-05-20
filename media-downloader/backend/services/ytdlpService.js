@@ -12,7 +12,6 @@ import { join } from 'path';
 
 const localBinaryPath = join(process.cwd(), 'yt-dlp');
 const YT_DLP_CMD = existsSync(localBinaryPath) ? localBinaryPath : 'yt-dlp';
-const PYTHON_CMD = process.platform === 'win32' ? 'python' : 'python3';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -24,9 +23,9 @@ const PYTHON_CMD = process.platform === 'win32' ? 'python' : 'python3';
  */
 const runYtDlp = (args, timeoutMs = 30000) => {
   return new Promise((resolve, reject) => {
-    console.log(`[ytdlp] spawn: ${PYTHON_CMD} ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
+    console.log(`[ytdlp] spawn: ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
 
-    const proc = spawn(PYTHON_CMD, [YT_DLP_CMD, ...args], {
+    const proc = spawn(YT_DLP_CMD, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: timeoutMs,
     });
@@ -114,5 +113,5 @@ export const createDownloadStream = (url, type = 'video', formatId = null) => {
   ];
 
   console.log(`[ytdlp] Stream: type=${type} format=${formatSelector}`);
-  return spawn(PYTHON_CMD, [YT_DLP_CMD, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+  return spawn(YT_DLP_CMD, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 };

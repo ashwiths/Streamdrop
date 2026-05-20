@@ -1,12 +1,12 @@
 providers = ["node"]
 
 [phases.setup]
-aptPkgs = ["python3", "ffmpeg", "curl"]
+nixPkgs = ["ffmpeg", "curl"]
 
 [phases.build]
 cmds = [
   "npm run build",
-  "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o yt-dlp",
+  "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o yt-dlp",
   "chmod a+rx yt-dlp"
 ]
 
