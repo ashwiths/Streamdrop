@@ -7,7 +7,7 @@
  */
 
 import { spawn } from 'child_process';
-import { existsSync, chmodSync } from 'fs';
+import { existsSync, chmodSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import os from 'os';
 
@@ -55,20 +55,51 @@ const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV =
  * @param {string[]} args
  * @param {number} [timeoutMs=30000]
  */
-const runYtDlp = (args, timeoutMs = 30000) => {
-  return new Promise((resolve, reject) => {
-    console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
+const runYtDlp = async (args, timeoutMs = 30000) => {
+  let cookieFilePath = null;
+  const finalArgs = [...args];
 
-    const proc = spawn(YT_DLP_CMD, args, {
+  if (process.env.YTDLP_COOKIES) {
+    try {
+      const tempDir = os.tmpdir();
+      cookieFilePath = join(tempDir, `ytdlp-cookies-${Date.now()}-${Math.random().toString(36).substring(7)}.txt`);
+      writeFileSync(cookieFilePath, process.env.YTDLP_COOKIES, 'utf-8');
+      console.log(`[ytdlp] Secure cookies loaded from environment to temp file: ${cookieFilePath}`);
+      
+      // Inject cookies parameter
+      finalArgs.unshift('--cookies', cookieFilePath);
+    } catch (err) {
+      console.error(`[ytdlp] Failed to write temporary cookie file:`, err);
+    }
+  } else {
+    console.log(`[ytdlp] No YTDLP_COOKIES found in environment, running anonymously.`);
+  }
+
+  return new Promise((resolve, reject) => {
+    console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);
+
+    const proc = spawn(YT_DLP_CMD, finalArgs, {
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: timeoutMs, 
     });
 
     let stdout = '';
     let stderr = '';
+    
+    const cleanupCookies = () => {
+      if (cookieFilePath && existsSync(cookieFilePath)) {
+        try {
+          unlinkSync(cookieFilePath);
+          console.log(`[ytdlp] Securely deleted temporary cookies file.`);
+        } catch (e) {
+          console.error(`[ytdlp] Failed to clean up cookies file:`, e);
+        }
+      }
+    };
 
     const timer = setTimeout(() => {
       proc.kill('SIGKILL');
+      cleanupCookies();
       reject(new Error('yt-dlp timed out'));
     }, timeoutMs);
 
@@ -77,6 +108,7 @@ const runYtDlp = (args, timeoutMs = 30000) => {
 
     proc.on('close', (code) => {
       clearTimeout(timer);
+      cleanupCookies();
       console.log(`[ytdlp] Execution finished with exit code: ${code}`);
       if (stdout) console.log(`[ytdlp] STDOUT (snippet): ${stdout.substring(0, 300)}...`);
       if (stderr) console.error(`[ytdlp] STDERR (snippet): ${stderr.substring(0, 300)}...`);
@@ -92,7 +124,9 @@ const runYtDlp = (args, timeoutMs = 30000) => {
 
     proc.on('error', (err) => {
       clearTimeout(timer);
-      reject(new Error(`spawn error: ${err.message}`));
+      cleanupCookies();
+      console.error(`[ytdlp] Spawn error executing ${YT_DLP_CMD}:`, err);
+      reject(err);
     });
   });
 };
