@@ -1,7 +1,7 @@
 providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["ffmpeg", "curl"]
+nixPkgs = ["ffmpeg", "curl", "python3"]
 
 [phases.build]
 cmds = [

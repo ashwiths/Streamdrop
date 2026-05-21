@@ -123,34 +123,14 @@ export const getMediaInfo = async (req, res) => {
     if (isYouTubeUrl(url)) {
       let info;
       
-      if (isProduction) {
-        // PRODUCTION: Pure HTTP extraction via Cobalt & oEmbed
-        try {
-          info = await getCobaltInfo(url);
-          console.log(`[getMediaInfo] Cobalt extraction OK — "${info.title}"`);
-          return res.status(200).json({
-            success: true,
-            platform: 'youtube',
-            ...info
-          });
-        } catch (cobaltErr) {
-          console.error('[getMediaInfo] Cobalt error:', cobaltErr.message);
-          return res.status(422).json({
-            success: false,
-            error: `Could not fetch video info: ${cobaltErr.message}`,
-          });
-        }
-      } else {
-        // LOCAL DEVELOPMENT: yt-dlp binary
-        try {
-          info = await getVideoInfo(url);
-        } catch (ytErr) {
-          console.error('[getMediaInfo] yt-dlp error:', ytErr.message);
-          return res.status(422).json({
-            success: false,
-            error: `Could not fetch video info: ${ytErr.message}`,
-          });
-        }
+      try {
+        info = await getVideoInfo(url);
+      } catch (ytErr) {
+        console.error('[getMediaInfo] yt-dlp error:', ytErr.message);
+        return res.status(422).json({
+          success: false,
+          error: `Could not fetch video info: ${ytErr.message}`,
+        });
       }
 
       // ── Parse formats from yt-dlp JSON ───────────────────────────────────
@@ -295,25 +275,8 @@ export const downloadFile = async (req, res) => {
       const contentType = downloadType === 'audio' ? 'audio/mp4' : 'video/mp4';
       const filename = `${safeTitle}_${timestamp}.${fileExt}`;
 
-      if (isProduction) {
-        // PRODUCTION: Use Cobalt direct stream proxy
-        console.log(`[downloadFile] Starting Cobalt stream proxy → ${filename}`);
-        // For format matching, we use the original format sent by the frontend (e.g. '1080p')
-        // We look for the quality label if available, but the frontend currently sends format id like 'cobalt-1080'
-        let qualityLabel = '';
-        if (format && format.includes('cobalt-')) {
-            qualityLabel = format.replace('cobalt-', '') + (type === 'video' ? 'p' : 'kbps');
-        } else {
-            // If they sent raw quality param
-            qualityLabel = req.body.quality || '';
-        }
-        
-        const streamUrl = await getCobaltStreamUrl(url, downloadType, qualityLabel);
-        return await proxyStream(streamUrl, res, filename);
-      } else {
-        // LOCAL DEV: yt-dlp spawn
-        // We download to a temp file because merged formats cannot be piped directly to stdout.
-        const tempDir = os.tmpdir();
+      // We download to a temp file because merged formats cannot be piped directly to stdout.
+      const tempDir = os.tmpdir();
         const tempFilePrefix = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
         const tempFilePathTemplate = path.join(tempDir, `${tempFilePrefix}.%(ext)s`);
 
@@ -386,7 +349,6 @@ export const downloadFile = async (req, res) => {
         }
         
         return; // handle by stream
-      }
     }
 
     // ── Direct Image / File Download ──────────────────────────────────────────

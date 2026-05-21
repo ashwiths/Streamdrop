@@ -24,10 +24,6 @@ const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV =
  * @param {number} [timeoutMs=30000]
  */
 const runYtDlp = (args, timeoutMs = 30000) => {
-  if (isProduction) {
-    return Promise.reject(new Error("yt-dlp execution is disabled in production. Use cobaltService instead."));
-  }
-
   return new Promise((resolve, reject) => {
     console.log(`[ytdlp] spawn: ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
 
@@ -97,10 +93,6 @@ export const getVideoInfo = async (url) => {
  * @param {string} outputPath   - absolute path to temp file
  */
 export const downloadToTempFile = async (url, type = 'video', formatId = null, outputPath) => {
-  if (isProduction) {
-    throw new Error("yt-dlp execution is disabled in production. Use cobaltService instead.");
-  }
-
   let formatSelector;
 
   if (type === 'audio') {
