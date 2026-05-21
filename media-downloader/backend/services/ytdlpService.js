@@ -7,13 +7,37 @@
  */
 
 import { spawn } from 'child_process';
-import { existsSync, chmodSync, writeFileSync, unlinkSync } from 'fs';
+import { existsSync, chmodSync, writeFileSync, unlinkSync, mkdirSync, symlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import ffmpegPath from 'ffmpeg-static';
+import ffprobeStatic from 'ffprobe-static';
+
+const ffprobePath = ffprobeStatic.path;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// ─── Ensure static ffmpeg/ffprobe binaries are linked for yt-dlp ────────────
+const binDir = join(__dirname, '../bin');
+if (!existsSync(binDir)) {
+  mkdirSync(binDir, { recursive: true });
+}
+
+try {
+  const ffmpegLink = join(binDir, os.platform() === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+  const ffprobeLink = join(binDir, os.platform() === 'win32' ? 'ffprobe.exe' : 'ffprobe');
+  
+  if (!existsSync(ffmpegLink)) {
+    symlinkSync(ffmpegPath, ffmpegLink);
+  }
+  if (!existsSync(ffprobeLink)) {
+    symlinkSync(ffprobePath, ffprobeLink);
+  }
+} catch (e) {
+  console.error(`[ytdlp] Failed to create symlinks for ffmpeg/ffprobe:`, e.message);
+}
 
 const cookiesPath = join(__dirname, '../cookies.txt');
 if (existsSync(cookiesPath)) {
@@ -73,8 +97,8 @@ const runYtDlp = async (args, timeoutMs = 30000) => {
 
   // Always use local cookies file to bypass YouTube blocking
   // Force Node.js as the JavaScript runtime to solve EJS signature / n challenge solving successfully
-  finalArgs.unshift('--cookies', cookiesPath, '--js-runtimes', 'node');
-  console.log(`[ytdlp] Injecting cookies from: ${cookiesPath} and forcing node JS runtime`);
+  finalArgs.unshift('--cookies', cookiesPath, '--js-runtimes', 'node', '--ffmpeg-location', binDir);
+  console.log(`[ytdlp] Injecting cookies from: ${cookiesPath} and forcing node JS runtime, ffmpeg: ${binDir}`);
 
   return new Promise((resolve, reject) => {
     console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);
