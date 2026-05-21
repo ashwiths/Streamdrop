@@ -59,21 +59,8 @@ const runYtDlp = async (args, timeoutMs = 30000) => {
   let cookieFilePath = null;
   const finalArgs = [...args];
 
-  if (process.env.YTDLP_COOKIES) {
-    try {
-      const tempDir = os.tmpdir();
-      cookieFilePath = join(tempDir, `ytdlp-cookies-${Date.now()}-${Math.random().toString(36).substring(7)}.txt`);
-      writeFileSync(cookieFilePath, process.env.YTDLP_COOKIES, 'utf-8');
-      console.log(`[ytdlp] Secure cookies loaded from environment to temp file: ${cookieFilePath}`);
-      
-      // Inject cookies parameter
-      finalArgs.unshift('--cookies', cookieFilePath);
-    } catch (err) {
-      console.error(`[ytdlp] Failed to write temporary cookie file:`, err);
-    }
-  } else {
-    console.log(`[ytdlp] No YTDLP_COOKIES found in environment, running anonymously.`);
-  }
+  // Always use local cookies.txt file to bypass YouTube blocking
+  finalArgs.unshift('--cookies', 'cookies.txt');
 
   return new Promise((resolve, reject) => {
     console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);
