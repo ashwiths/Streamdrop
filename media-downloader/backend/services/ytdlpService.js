@@ -163,8 +163,9 @@ export const getVideoInfo = async (url) => {
  * @param {'video'|'audio'} type
  * @param {string} [formatId]   - yt-dlp format_id for specific quality
  * @param {string} outputPath   - absolute path to temp file
+ * @param {string} [qualityParam] - audio bitrate (e.g. '128K')
  */
-export const downloadToTempFile = async (url, type = 'video', formatId = null, outputPath) => {
+export const downloadToTempFile = async (url, type = 'video', formatId = null, outputPath, qualityParam = '128K') => {
   let formatSelector;
   const args = [
     '--no-playlist',
@@ -174,7 +175,7 @@ export const downloadToTempFile = async (url, type = 'video', formatId = null, o
 
   if (type === 'audio') {
     formatSelector = 'bestaudio';
-    args.push('--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0');
+    args.push('--extract-audio', '--audio-format', 'mp3', '--audio-quality', qualityParam || '128K');
   } else {
     const ytDlpFormat = formatId || "bv*+ba/b";
     console.log("Using yt-dlp format:", ytDlpFormat);
