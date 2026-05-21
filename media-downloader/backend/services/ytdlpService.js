@@ -8,8 +8,19 @@
 
 import { spawn } from 'child_process';
 import { existsSync, chmodSync, writeFileSync, unlinkSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import os from 'os';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const cookiesPath = join(__dirname, '../cookies.txt');
+if (existsSync(cookiesPath)) {
+  console.log(`[ytdlp] ✅ Cookies file found at: ${cookiesPath}`);
+} else {
+  console.error(`[ytdlp] ❌ Cookies file NOT FOUND at: ${cookiesPath}`);
+}
 
 const resolveYtDlpBinary = () => {
   const platform = os.platform();
@@ -60,7 +71,8 @@ const runYtDlp = async (args, timeoutMs = 30000) => {
   const finalArgs = [...args];
 
   // Always use local cookies file to bypass YouTube blocking
-  finalArgs.unshift('--cookies', 'www.youtube.com_cookies.txt');
+  finalArgs.unshift('--cookies', cookiesPath);
+  console.log(`[ytdlp] Injecting cookies from: ${cookiesPath}`);
 
   return new Promise((resolve, reject) => {
     console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);
