@@ -78,7 +78,6 @@ accounts.google.com	FALSE	/	TRUE	1810845768	LSOLH	||_SVI_ELjvz7XdyJQDGBAiP01BRUR
 .vercel.com	TRUE	/	TRUE	1810887743	rl_trait	RS_ENC_v3_eyJlbWFpbCI6ImluZmFudGFzaGlsNTVAZ21haWwuY29tIiwic2Vjb25kYXJ5X2VtYWlscyI6W10sIm5hbWUiOm51bGwsInVzZXJuYW1lIjoiYXNod2l0aHMifQ%3D%3D
 .vercel.com	TRUE	/	TRUE	1779400708	_v-anonymous-id-renewed	1
 .vercel.com	TRUE	/	TRUE	0	_v-session	{%22id%22:%22b1d5a693-79c9-47fc-9eb9-0107934f0ea7%22%2C%22landing_page%22:%22https://vercel.com/infant-ashils-projects/sheethub-2q9h/settings/general%22%2C%22referrer%22:%22%22%2C%22version%22:1}
-.vercel.com	TRUE	/	TRUE	1779363425	__stripe_sid	36bcabcf-0503-4887-9531-d6422da7d1f1fa036d
 .github.com	TRUE	/	TRUE	1803805736	_octo	GH1.1.477265966.1772269740
 .github.com	TRUE	/	TRUE	1810232977	logged_in	yes
 .github.com	TRUE	/	TRUE	1810232977	dotcom_user	ashwiths
@@ -299,8 +298,8 @@ contabo.com	FALSE	/	TRUE	1813524159	vat	{"cc":"AD","lang":"en","currency":"EUR",
 .mozilla.org	TRUE	/	FALSE	1813922030	_ga	GA1.1.1009356350.1779361988
 .youtube.com	TRUE	/	TRUE	1794914052	__Secure-YNID	18.YT=MHX4aJ2A8YvNpZfq10aWwFr-rnUdbcMtZI8phFZhwqkesidk2Ff7ULaFYQyyY88EkDK1k35bPAB_AXXvwWOEIDjyCn5ZnrGNTttdMjp_RZpHBuYZu32ON9t3Rf6si6dg7mQo74X-lZimzRusGBigfDV9n7gTnzVTkmJ9k0cQTC35xb8rCmJTXnf_FaSq2pnE92swWBEqYf8cHENL322jm5UqgYkjQ5uOSDl9sAKpGBl-SsQpLwBLc-cq1BfNlHXm3C-MZEnZpEz5qID4Uapyr60TNG1y967kEVWKppPmttpUn57VdmaGD_Q3D_IcDnC0GDpPv1NmLOk56guLzJu59w
 .youtube.com	TRUE	/	TRUE	1779363852	GPS	1
-.youtube.com	TRUE	/	TRUE	1794915409	VISITOR_INFO1_LIVE	kp_LPwPVOM0
-.youtube.com	TRUE	/	TRUE	1794915409	VISITOR_PRIVACY_METADATA	CgJJThIEGgAgMw%3D%3D
+.youtube.com	TRUE	/	TRUE	1794915665	VISITOR_INFO1_LIVE	kp_LPwPVOM0
+.youtube.com	TRUE	/	TRUE	1794915665	VISITOR_PRIVACY_METADATA	CgJJThIEGgAgMw%3D%3D
 .youtube.com	TRUE	/	FALSE	0	PREF	f4=4000000&f6=40000000&tz=UTC&f7=100&hl=en
 .youtube.com	TRUE	/	TRUE	1810898061	__Secure-1PSIDTS	sidts-CjUBhkeRd3zYErzFHNGHdDAhJHLhuk6PnWhHkzcKOoPr1QTgNUXTsgdY-ueLVfMEGAq32q80VhAA
 .youtube.com	TRUE	/	TRUE	1810898061	__Secure-3PSIDTS	sidts-CjUBhkeRd3zYErzFHNGHdDAhJHLhuk6PnWhHkzcKOoPr1QTgNUXTsgdY-ueLVfMEGAq32q80VhAA
@@ -309,3 +308,4 @@ contabo.com	FALSE	/	TRUE	1813524159	vat	{"cc":"AD","lang":"en","currency":"EUR",
 .youtube.com	TRUE	/	TRUE	1810899272	__Secure-3PSIDCC	AKEyXzVeUSNZeXcmlcuKbQVTYMzL9UKJD4zKjPI9ohKGtEhYw1UoquVcqwUSOxIcrw_IV27c
 .youtube.com	TRUE	/	TRUE	1794914688	__Secure-ROLLOUT_TOKEN	CKSg7pe9vIi10wEQgtOqv6LKlAMY253sx6LKlAM%3D
 .youtube.com	TRUE	/	TRUE	0	SOCS	CAI
+.youtube.com	TRUE	/	TRUE	0	YSC	Ozsfnkh5v_c
