@@ -87,15 +87,16 @@ export const getVideoInfo = async (url) => {
 };
 
 /**
- * Creates a child_process for streaming media directly to an HTTP response.
- * The caller is responsible for piping proc.stdout → res.
+ * Downloads media to a specified temporary file path.
+ * This is required for formats that need merging (e.g. video + audio),
+ * because yt-dlp cannot pipe merged formats directly to stdout.
  *
  * @param {string} url
  * @param {'video'|'audio'} type
  * @param {string} [formatId]   - yt-dlp format_id for specific quality
- * @returns {ChildProcess}
+ * @param {string} outputPath   - absolute path to temp file
  */
-export const createDownloadStream = (url, type = 'video', formatId = null) => {
+export const downloadToTempFile = async (url, type = 'video', formatId = null, outputPath) => {
   if (isProduction) {
     throw new Error("yt-dlp execution is disabled in production. Use cobaltService instead.");
   }
@@ -118,10 +119,12 @@ export const createDownloadStream = (url, type = 'video', formatId = null) => {
     '--no-playlist',
     '--no-warnings',
     '--socket-timeout', '20',
-    '-o', '-',   // stream to stdout
+    '-o', outputPath,
     url,
   ];
 
-  console.log(`[ytdlp] Stream: type=${type} format=${formatSelector}`);
-  return spawn(YT_DLP_CMD, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  console.log(`[ytdlp] Downloading to file: type=${type} format=${formatSelector}`);
+  console.log(`[ytdlp] Command: ${YT_DLP_CMD} ${args.join(' ')}`);
+
+  return await runYtDlp(args, 180000); // 3 minutes timeout for download and merge
 };
