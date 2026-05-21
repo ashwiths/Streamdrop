@@ -14,33 +14,14 @@ console.log(`[boot] StreamDrop API starting...`);
 console.log(`[boot] NODE_ENV=${process.env.NODE_ENV || 'development'} | PORT=${PORT} | Railway=${!!process.env.RAILWAY_ENVIRONMENT}`);
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://linkdownload-orpin.vercel.app',
-  'https://streamdrop-jd7q.vercel.app',
-  process.env.FRONTEND_URL,
-].filter(Boolean);
-
-console.log(`[boot] Allowed CORS origins: ${allowedOrigins.join(', ')}`);
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman, mobile apps, same-host)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
-    console.warn(`[CORS] Blocked: ${origin}`);
-    callback(new Error(`CORS: origin "${origin}" not allowed`));
-  },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle all preflight requests
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://streamdrop-blush.vercel.app"
+  ],
+  methods: ["GET", "POST", "OPTIONS"],
+  credentials: true
+}));
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));

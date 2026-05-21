@@ -4,12 +4,11 @@ import axios from 'axios';
 // In production (Vercel), set VITE_API_URL in Vercel → Project → Environment Variables.
 // Example value: https://your-app.railway.app/api
 // Locally, this falls back to http://localhost:5000/api
-let API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-if (API_BASE && !API_BASE.endsWith('/api')) {
-  API_BASE = API_BASE.replace(/\/$/, '') + '/api';
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+console.log("Using API:", API_BASE_URL);
+
 const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
