@@ -174,11 +174,10 @@ export const downloadToTempFile = async (url, type = 'video', formatId = null, o
   if (type === 'audio') {
     formatSelector = 'bestaudio';
     args.push('--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0');
-  } else if (formatId && formatId !== 'best') {
-    formatSelector = `${formatId}+bestaudio/bestvideo+bestaudio/${formatId}`;
-    args.push('--merge-output-format', 'mp4');
   } else {
-    formatSelector = 'bestvideo+bestaudio/best';
+    const ytDlpFormat = formatId || "bv*+ba/b";
+    console.log("Using yt-dlp format:", ytDlpFormat);
+    formatSelector = ytDlpFormat === "bv*+ba/b" ? "bv*+ba/b" : `${ytDlpFormat}+bestaudio/best`;
     args.push('--merge-output-format', 'mp4');
   }
 
@@ -188,5 +187,17 @@ export const downloadToTempFile = async (url, type = 'video', formatId = null, o
   console.log(`[ytdlp] Command: ${YT_DLP_CMD} ${args.join(' ')}`);
   console.log(`[ytdlp] Expecting FFmpeg execution for merging...`);
 
-  return await runYtDlp(args, 180000); // 3 minutes timeout for download and merge
+  try {
+    return await runYtDlp(args, 180000); // 3 minutes timeout for download and merge
+  } catch (err) {
+    if (type === 'video' && formatSelector !== 'best') {
+      console.warn(`[ytdlp] Video download failed with format "${formatSelector}": ${err.message}. Retrying with fallback format "best"...`);
+      
+      const fallbackArgs = args.map(arg => arg === formatSelector ? 'best' : arg);
+      console.log(`[ytdlp] Retrying command: ${YT_DLP_CMD} ${fallbackArgs.join(' ')}`);
+      
+      return await runYtDlp(fallbackArgs, 180000);
+    }
+    throw err;
+  }
 };
