@@ -307,11 +307,19 @@ export const downloadFile = async (req, res) => {
           res.setHeader('Content-Length', stat.size);
           res.setHeader('Cache-Control', 'no-store');
 
+          console.log(`[downloadFile] Validation | Content-Type: ${actualContentType} | Size: ${stat.size} bytes`);
+
           const readStream = fs.createReadStream(actualTempFilePath);
+          
+          let bytesTransferred = 0;
+          readStream.on('data', (chunk) => {
+            bytesTransferred += chunk.length;
+          });
+
           readStream.pipe(res);
 
           readStream.on('end', () => {
-            console.log(`[downloadFile] Finished sending to client. Cleaning up ${actualTempFilePath}`);
+            console.log(`[downloadFile] Finished sending to client. Bytes transferred: ${bytesTransferred}/${stat.size}. Cleaning up ${actualTempFilePath}`);
             fs.unlink(actualTempFilePath, (err) => {
               if (err) console.error(`[downloadFile] Cleanup error:`, err);
             });

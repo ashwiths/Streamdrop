@@ -165,26 +165,24 @@ export const getVideoInfo = async (url) => {
  */
 export const downloadToTempFile = async (url, type = 'video', formatId = null, outputPath) => {
   let formatSelector;
-
-  if (type === 'audio') {
-    // Best audio-only, prefer m4a for maximum compatibility
-    formatSelector = 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio';
-  } else if (formatId && formatId !== 'best') {
-    // Specific format — try the requested id, fall back to best single-stream mp4
-    formatSelector = `${formatId}+bestaudio[ext=m4a]/${formatId}/best[ext=mp4]/best`;
-  } else {
-    // Default: best single-stream (no merge required, lowest friction on Railway)
-    formatSelector = 'best[ext=mp4]/best[ext=webm]/best';
-  }
-
   const args = [
-    '-f', formatSelector,
     '--no-playlist',
     '--no-warnings',
     '--socket-timeout', '20',
-    '-o', outputPath,
-    url,
   ];
+
+  if (type === 'audio') {
+    formatSelector = 'bestaudio';
+    args.push('--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0');
+  } else if (formatId && formatId !== 'best') {
+    formatSelector = `${formatId}+bestaudio[ext=m4a]/${formatId}/best[ext=mp4]/best`;
+    args.push('--merge-output-format', 'mp4');
+  } else {
+    formatSelector = 'best[ext=mp4]/best[ext=webm]/best';
+    args.push('--merge-output-format', 'mp4');
+  }
+
+  args.push('-f', formatSelector, '-o', outputPath, url);
 
   console.log(`[ytdlp] Downloading to file: type=${type} format=${formatSelector}`);
   console.log(`[ytdlp] Command: ${YT_DLP_CMD} ${args.join(' ')}`);
