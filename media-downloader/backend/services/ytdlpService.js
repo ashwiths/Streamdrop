@@ -7,11 +7,43 @@
  */
 
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, chmodSync } from 'fs';
 import { join } from 'path';
+import os from 'os';
 
-const localBinaryPath = join(process.cwd(), 'yt-dlp');
-const YT_DLP_CMD = existsSync(localBinaryPath) ? localBinaryPath : 'yt-dlp';
+const resolveYtDlpBinary = () => {
+  const platform = os.platform();
+  const cwd = process.cwd();
+  
+  let binaryName = 'yt-dlp'; // Default fallback
+  
+  if (platform === 'win32') {
+    binaryName = 'yt-dlp.exe';
+  } else if (platform === 'linux' || platform === 'darwin') {
+    binaryName = 'yt-dlp-linux';
+  }
+
+  const bundledPath = join(cwd, binaryName);
+  
+  if (existsSync(bundledPath)) {
+    console.log(`[ytdlp] Found platform-specific binary at: ${bundledPath}`);
+    // Ensure binary is executable
+    if (platform !== 'win32') {
+      try {
+         chmodSync(bundledPath, 0o755);
+         console.log(`[ytdlp] Granted execution permissions to ${bundledPath}`);
+      } catch (err) {
+         console.warn(`[ytdlp] Could not chmod binary: ${err.message}`);
+      }
+    }
+    return bundledPath;
+  }
+  
+  console.log(`[ytdlp] Platform specific binary not found. Falling back to default 'yt-dlp'`);
+  return existsSync(join(cwd, 'yt-dlp')) ? join(cwd, 'yt-dlp') : 'yt-dlp';
+};
+
+const YT_DLP_CMD = resolveYtDlpBinary();
 
 const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
 
@@ -25,31 +57,36 @@ const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV =
  */
 const runYtDlp = (args, timeoutMs = 30000) => {
   return new Promise((resolve, reject) => {
-    console.log(`[ytdlp] spawn: ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
+    console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${args.slice(0, 3).join(' ')} ...`);
 
     const proc = spawn(YT_DLP_CMD, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: timeoutMs,
+      timeout: timeoutMs, 
     });
 
     let stdout = '';
     let stderr = '';
-
-    proc.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
-    proc.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
 
     const timer = setTimeout(() => {
       proc.kill('SIGKILL');
       reject(new Error('yt-dlp timed out'));
     }, timeoutMs);
 
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
     proc.on('close', (code) => {
       clearTimeout(timer);
-      if (code === 0 || stdout.trim()) {
+      console.log(`[ytdlp] Execution finished with exit code: ${code}`);
+      if (stdout) console.log(`[ytdlp] STDOUT (snippet): ${stdout.substring(0, 300)}...`);
+      if (stderr) console.error(`[ytdlp] STDERR (snippet): ${stderr.substring(0, 300)}...`);
+
+      if (code === 0) {
         resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
       } else {
-        const msg = stderr.trim() || `yt-dlp exited with code ${code}`;
-        reject(new Error(msg));
+        const error = new Error(`yt-dlp exited with code ${code}. Stderr: ${stderr}`);
+        error.code = code;
+        reject(error);
       }
     });
 
