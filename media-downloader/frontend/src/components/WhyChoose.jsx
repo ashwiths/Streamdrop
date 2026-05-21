@@ -86,7 +86,7 @@ export default function WhyChoose() {
           margin: 0,
           textShadow: '0 0 20px rgba(255,255,255,0.1)'
         }}>
-          Why Choose StreamDrop?
+          Why Choose AshDrop?
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ 

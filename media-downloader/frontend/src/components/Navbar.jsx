@@ -124,7 +124,7 @@ export default function Navbar() {
             <FiDownload style={{ color: '#fff', fontSize: '18px', strokeWidth: 2.5 }} />
           </div>
           <span style={{ fontSize: '21px', fontWeight: 700, letterSpacing: '-0.03em' }}>
-            <span style={{ color: '#ffffff' }}>Stream</span>
+            <span style={{ color: '#ffffff' }}>Ash</span>
             <span style={{ color: '#f97316' }}>Drop</span>
           </span>
         </div>
