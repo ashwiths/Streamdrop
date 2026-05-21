@@ -52,18 +52,13 @@ export default function HeroSection() {
   };
 
   return (
-    <section 
+    <section
       id="home"
+      className="flex flex-col items-center justify-center text-center overflow-hidden"
       style={{
         position: 'relative',
-        minHeight: '102vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: '130px 24px 70px',
-        overflow: 'hidden',
+        minHeight: '100svh',
+        padding: 'clamp(100px, 16vw, 140px) 16px clamp(60px, 8vw, 80px)',
         fontFamily: "'Space Grotesk', sans-serif",
         background: '#020204',
       }}
@@ -257,11 +252,11 @@ export default function HeroSection() {
           variants={fadeUp}
           style={{ marginTop: '40px', width: '100%', maxWidth: '720px' }}
         >
-          <div 
+          <div
             className="animated-border-glow"
             style={{
-              borderRadius: '24px',
-              padding: '24px 28px',
+              borderRadius: '20px',
+              padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 28px)',
               background: 'rgba(8, 8, 12, 0.82)',
               backdropFilter: 'blur(30px)',
               WebkitBackdropFilter: 'blur(30px)',
@@ -270,15 +265,16 @@ export default function HeroSection() {
             }}
           >
             {/* Input Form */}
-            <form onSubmit={handleDownload} className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
-              <div style={{ flex: '1 1 250px', position: 'relative' }}>
+            <form onSubmit={handleDownload} className="flex flex-col gap-3">
+              <div style={{ position: 'relative', width: '100%', height: '54px' }}>
                 <div style={{
                   position: 'absolute',
-                  top: '50%', left: '18px',
+                  top: '50%', left: '16px',
                   transform: 'translateY(-50%)',
                   pointerEvents: 'none',
                   display: 'flex',
                   alignItems: 'center',
+                  zIndex: 1,
                 }}>
                   <FiLink style={{ color: 'rgba(255,255,255,0.5)', fontSize: '17px' }} />
                 </div>
@@ -290,18 +286,19 @@ export default function HeroSection() {
                   onFocus={() => setInputFocused(true)}
                   onBlur={() => setInputFocused(false)}
                   style={{
+                    position: 'absolute',
+                    inset: 0,
                     width: '100%',
-                    paddingLeft: '50px',
-                    paddingRight: '18px',
-                    paddingTop: '16.5px',
-                    paddingBottom: '16.5px',
-                    borderRadius: '14px',
+                    height: '100%',
+                    paddingLeft: '46px',
+                    paddingRight: '16px',
+                    borderRadius: '12px',
                     background: 'rgba(0, 0, 0, 0.4)',
                     border: inputFocused
                       ? '1px solid rgba(249,115,22,0.8)'
                       : '1px solid rgba(255,255,255,0.12)',
-                    boxShadow: inputFocused 
-                      ? '0 0 20px rgba(249,115,22,0.2), inset 0 2px 4px rgba(0,0,0,0.5)' 
+                    boxShadow: inputFocused
+                      ? '0 0 20px rgba(249,115,22,0.2), inset 0 2px 4px rgba(0,0,0,0.5)'
                       : 'inset 0 2px 4px rgba(0,0,0,0.3)',
                     color: '#fff',
                     fontSize: '15px',
