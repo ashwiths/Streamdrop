@@ -22,7 +22,7 @@ console.log(`   ✅ yt-dlp version: ${version.trim()}\n`);
 
 // Test 2: YouTube info extraction
 console.log('2. YouTube metadata extraction...');
-const iProc = spawn('python3', [YT_DLP, '--cookies', 'cookies.txt', '--dump-json', '--no-playlist', '--no-warnings', TEST_URL], {
+const iProc = spawn('python3', [YT_DLP, '--cookies', 'www.youtube.com_cookies.txt', '--dump-json', '--no-playlist', '--no-warnings', TEST_URL], {
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let infoOut = '';

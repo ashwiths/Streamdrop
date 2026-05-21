@@ -59,8 +59,8 @@ const runYtDlp = async (args, timeoutMs = 30000) => {
   let cookieFilePath = null;
   const finalArgs = [...args];
 
-  // Always use local cookies.txt file to bypass YouTube blocking
-  finalArgs.unshift('--cookies', 'cookies.txt');
+  // Always use local cookies file to bypass YouTube blocking
+  finalArgs.unshift('--cookies', 'www.youtube.com_cookies.txt');
 
   return new Promise((resolve, reject) => {
     console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);
