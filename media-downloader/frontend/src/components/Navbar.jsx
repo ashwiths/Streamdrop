@@ -94,7 +94,7 @@ export default function Navbar() {
   const innerStyle = {
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: '0 24px',
+    padding: '0 16px', // Reduced padding for mobile
     height: '72px',
     display: 'flex',
     alignItems: 'center',
@@ -210,6 +210,7 @@ export default function Navbar() {
           {/* Animated CTA Button */}
           <motion.button
             onClick={() => handleScrollTo('Home')}
+            className="hidden sm:block"
             whileHover={{ scale: 1.05, boxShadow: '0 0 25px rgba(249, 115, 22, 0.45)' }}
             whileTap={{ scale: 0.95 }}
             style={{

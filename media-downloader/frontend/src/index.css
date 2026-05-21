@@ -3,12 +3,18 @@
 /* ── Reset ───────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-body {
+html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body {
   background: #020204;
   color: #fafafa;
-  overflow-x: hidden;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
