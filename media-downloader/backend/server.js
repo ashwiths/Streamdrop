@@ -15,12 +15,17 @@ console.log(`[boot] NODE_ENV=${process.env.NODE_ENV || 'development'} | PORT=${P
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "https://drop.ashil.space",
-    "https://streamdrop-blush.vercel.app"
-  ],
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      "https://drop.ashil.space",
+      "https://streamdrop-blush.vercel.app"
+    ];
+    if (!origin || allowedOrigins.includes(origin) || origin.startsWith("http://localhost:") || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true
 };
