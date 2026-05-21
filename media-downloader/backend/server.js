@@ -14,19 +14,17 @@ console.log(`[boot] StreamDrop API starting...`);
 console.log(`[boot] NODE_ENV=${process.env.NODE_ENV || 'development'} | PORT=${PORT} | Railway=${!!process.env.RAILWAY_ENVIRONMENT}`);
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
-const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "https://streamdrop-blush.vercel.app",
-    "https://drop.ashil.space"
-  ],
-  methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.use(cors({
+origin: [
+"http://localhost:5173",
+"https://drop.ashil.space",
+"https://streamdrop-blush.vercel.app"
+],
+methods: ["GET", "POST", "OPTIONS"],
+credentials: true
+}));
+
+app.options("*", cors());
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
