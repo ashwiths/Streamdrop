@@ -71,8 +71,9 @@ const runYtDlp = async (args, timeoutMs = 30000) => {
   const finalArgs = [...args];
 
   // Always use local cookies file to bypass YouTube blocking
-  finalArgs.unshift('--cookies', cookiesPath);
-  console.log(`[ytdlp] Injecting cookies from: ${cookiesPath}`);
+  // Force Node.js as the JavaScript runtime to solve EJS signature / n challenge solving successfully
+  finalArgs.unshift('--cookies', cookiesPath, '--js-runtimes', 'node');
+  console.log(`[ytdlp] Injecting cookies from: ${cookiesPath} and forcing node JS runtime`);
 
   return new Promise((resolve, reject) => {
     console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);

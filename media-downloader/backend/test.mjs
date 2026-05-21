@@ -7,14 +7,14 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const YT_DLP = join(__dirname, 'utils/yt-dlp');
+const YT_DLP = join(__dirname, 'yt-dlp-linux');
 const TEST_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
 console.log('=== StreamDrop Backend — Deployment Readiness Test ===\n');
 
 // Test 1: yt-dlp version
 console.log('1. yt-dlp binary version...');
-const vProc = spawn('python3', [YT_DLP, '--version'], { stdio: ['ignore', 'pipe', 'pipe'] });
+const vProc = spawn(YT_DLP, ['--version'], { stdio: ['ignore', 'pipe', 'pipe'] });
 let version = '';
 vProc.stdout.on('data', d => version += d);
 await new Promise(r => vProc.on('close', r));
@@ -22,7 +22,7 @@ console.log(`   ✅ yt-dlp version: ${version.trim()}\n`);
 
 // Test 2: YouTube info extraction
 console.log('2. YouTube metadata extraction...');
-const iProc = spawn('python3', [YT_DLP, '--cookies', join(__dirname, 'cookies.txt'), '--dump-json', '--no-playlist', '--no-warnings', TEST_URL], {
+const iProc = spawn(YT_DLP, ['--cookies', join(__dirname, 'cookies.txt'), '--js-runtimes', 'node', '--dump-json', '--no-playlist', '--no-warnings', TEST_URL], {
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let infoOut = '';
