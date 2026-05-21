@@ -24,7 +24,6 @@ if (existsSync(cookiesPath)) {
 
 const resolveYtDlpBinary = () => {
   const platform = os.platform();
-  const cwd = process.cwd();
   
   let binaryName = 'yt-dlp'; // Default fallback
   
@@ -34,7 +33,8 @@ const resolveYtDlpBinary = () => {
     binaryName = 'yt-dlp-linux';
   }
 
-  const bundledPath = join(cwd, binaryName);
+  // The binary is in the backend root, which is one level up from the services directory
+  const bundledPath = join(__dirname, '..', binaryName);
   
   if (existsSync(bundledPath)) {
     console.log(`[ytdlp] Found platform-specific binary at: ${bundledPath}`);
@@ -51,7 +51,8 @@ const resolveYtDlpBinary = () => {
   }
   
   console.log(`[ytdlp] Platform specific binary not found. Falling back to default 'yt-dlp'`);
-  return existsSync(join(cwd, 'yt-dlp')) ? join(cwd, 'yt-dlp') : 'yt-dlp';
+  const rootFallback = join(__dirname, '..', 'yt-dlp');
+  return existsSync(rootFallback) ? rootFallback : 'yt-dlp';
 };
 
 const YT_DLP_CMD = resolveYtDlpBinary();

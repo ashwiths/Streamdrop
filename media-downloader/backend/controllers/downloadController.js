@@ -14,7 +14,6 @@ import path from 'path';
 import os from 'os';
 import { isValidUrl } from '../utils/helper.js';
 import { getVideoInfo, downloadToTempFile } from '../services/ytdlpService.js';
-import { getCobaltInfo, getCobaltStreamUrl } from '../services/cobaltService.js';
 
 const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
 
@@ -121,24 +120,6 @@ export const getMediaInfo = async (req, res) => {
 
     // ── YouTube ──────────────────────────────────────────────────────────────
     if (isYouTubeUrl(url)) {
-      if (isProduction) {
-        try {
-          console.log(`[getMediaInfo] Production environment: Routing YouTube URL through Cobalt API...`);
-          const cobaltInfo = await getCobaltInfo(url);
-          return res.status(200).json({
-            success: true,
-            platform: 'youtube',
-            ...cobaltInfo
-          });
-        } catch (err) {
-          console.error('[getMediaInfo] Cobalt API error:', err.message);
-          return res.status(422).json({
-            success: false,
-            error: `Could not fetch video info: ${err.message}`,
-          });
-        }
-      }
-
       let info;
       
       try {
@@ -293,23 +274,6 @@ export const downloadFile = async (req, res) => {
       const fileExt = downloadType === 'audio' ? 'm4a' : (ext || 'mp4');
       const contentType = downloadType === 'audio' ? 'audio/mp4' : 'video/mp4';
       const filename = `${safeTitle}_${timestamp}.${fileExt}`;
-
-      if (isProduction) {
-        try {
-          console.log(`[downloadFile] Production environment: Using Cobalt for downloading...`);
-          // Extract the quality label if format is a cobalt ID like 'cobalt-1080' or just raw label
-          const qualityLabel = format && format.includes('-') ? format.split('-')[1] : format;
-          const streamUrl = await getCobaltStreamUrl(url, downloadType, qualityLabel);
-          console.log(`[downloadFile] Cobalt direct stream URL resolved. Proxying stream to client...`);
-          return await proxyStream(streamUrl, res, filename);
-        } catch (err) {
-          console.error(`[downloadFile] Cobalt download error:`, err);
-          if (!res.headersSent) {
-            return res.status(500).json({ error: 'Failed to download file via Cobalt API.', message: err.message });
-          }
-          return;
-        }
-      }
 
       // We download to a temp file because merged formats cannot be piped directly to stdout.
       const tempDir = os.tmpdir();
