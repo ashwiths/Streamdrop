@@ -17,11 +17,13 @@ console.log(`[boot] NODE_ENV=${process.env.NODE_ENV || 'development'} | PORT=${P
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "https://streamdrop-blush.vercel.app"
+    "https://streamdrop-blush.vercel.app",
+    "https://drop.ashil.space"
   ],
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true
 }));
+app.options("*", cors());
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
