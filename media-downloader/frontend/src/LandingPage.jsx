@@ -35,7 +35,6 @@ export default function LandingPage() {
       >
         {/* Soft background mesh glow behind Supported Platforms */}
         <div 
-          className="animate-float-glow-1"
           style={{
             position: 'absolute',
             top: '10%', left: '50%',
@@ -46,12 +45,12 @@ export default function LandingPage() {
             filter: 'blur(100px)',
             zIndex: 1,
             pointerEvents: 'none',
+            willChange: 'transform',
           }}
         />
 
         {/* Soft background mesh glow behind Why Choose */}
         <div 
-          className="animate-float-glow-2"
           style={{
             position: 'absolute',
             top: '45%', right: '5%',
@@ -61,12 +60,12 @@ export default function LandingPage() {
             filter: 'blur(100px)',
             zIndex: 1,
             pointerEvents: 'none',
+            willChange: 'transform',
           }}
         />
 
         {/* Soft background mesh glow behind FAQ */}
         <div 
-          className="animate-float-glow-1"
           style={{
             position: 'absolute',
             bottom: '15%', left: '8%',
@@ -76,6 +75,7 @@ export default function LandingPage() {
             filter: 'blur(100px)',
             zIndex: 1,
             pointerEvents: 'none',
+            willChange: 'transform',
           }}
         />
 

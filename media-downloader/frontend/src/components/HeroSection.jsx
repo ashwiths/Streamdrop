@@ -126,7 +126,6 @@ export default function HeroSection() {
 
       {/* ── Ambient Glowing Spheres ── */}
       <div 
-        className="animate-float-glow-1"
         style={{
           position: 'absolute',
           top: '20%', left: '15%',
@@ -136,10 +135,10 @@ export default function HeroSection() {
           filter: 'blur(70px)',
           zIndex: 2,
           pointerEvents: 'none',
+          willChange: 'transform',
         }} 
       />
       <div 
-        className="animate-float-glow-2"
         style={{
           position: 'absolute',
           bottom: '25%', right: '10%',
@@ -149,6 +148,7 @@ export default function HeroSection() {
           filter: 'blur(70px)',
           zIndex: 2,
           pointerEvents: 'none',
+          willChange: 'transform',
         }} 
       />
 

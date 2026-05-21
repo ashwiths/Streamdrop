@@ -19,35 +19,48 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 20);
+    let ticking = false;
+    const fn = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  // Sync scroll positions using getBoundingClientRect to calculate true document-relative positions
+  // Sync scroll positions using IntersectionObserver (highly optimized, avoids layout thrashing)
   useEffect(() => {
-    const handleActiveSection = () => {
-      const scrollPos = window.scrollY + 140; // Trigger threshold
-      let currentSection = 'Home';
-
-      for (const [name, id] of Object.entries(LINK_MAP)) {
-        const el = document.getElementById(id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          const scrollTop = window.scrollY || document.documentElement.scrollTop;
-          const trueOffsetTop = rect.top + scrollTop;
-          const height = el.offsetHeight;
-
-          if (scrollPos >= trueOffsetTop && scrollPos < trueOffsetTop + height) {
-            currentSection = name;
-          }
-        }
-      }
-      setActive(currentSection);
+    const observerOptions = {
+      root: null,
+      rootMargin: '-40% 0px -40% 0px',
+      threshold: 0
     };
 
-    window.addEventListener('scroll', handleActiveSection, { passive: true });
-    return () => window.removeEventListener('scroll', handleActiveSection);
+    const observerCallback = (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          const name = Object.keys(LINK_MAP).find(key => LINK_MAP[key] === id);
+          if (name) {
+            setActive(name);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    Object.values(LINK_MAP).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   const handleScrollTo = (name) => {
