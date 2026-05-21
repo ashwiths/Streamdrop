@@ -39,7 +39,7 @@ try {
   console.error(`[ytdlp] Failed to create symlinks for ffmpeg/ffprobe:`, e.message);
 }
 
-const cookiesPath = join(__dirname, '../cookies.txt');
+const cookiesPath = join(__dirname, "..", "cookies.txt");
 if (existsSync(cookiesPath)) {
   console.log(`[ytdlp] ✅ Cookies file found at: ${cookiesPath}`);
 } else {
@@ -91,69 +91,71 @@ const isProduction = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV =
  * @param {string[]} args
  * @param {number} [timeoutMs=30000]
  */
-const runYtDlp = async (args, timeoutMs = 30000) => {
-  let cookieFilePath = null;
+const runYtDlp = async (args, timeoutMs = 30000, isRetry = false) => {
   const finalArgs = [...args];
+
+  if (!existsSync(cookiesPath)) {
+    throw new Error(`cookies.txt not found at ${cookiesPath}`);
+  }
 
   // Always use local cookies file to bypass YouTube blocking
   // Force Node.js as the JavaScript runtime to solve EJS signature / n challenge solving successfully
   finalArgs.unshift('--cookies', cookiesPath, '--js-runtimes', 'node', '--ffmpeg-location', binDir);
+  if (isRetry) {
+    finalArgs.push('--extractor-args', 'youtube:player_client=android');
+  }
+
+  console.log("Using cookies file:", cookiesPath);
   console.log(`[ytdlp] Injecting cookies from: ${cookiesPath} and forcing node JS runtime, ffmpeg: ${binDir}`);
 
-  return new Promise((resolve, reject) => {
-    console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);
+  try {
+    return await new Promise((resolve, reject) => {
+      console.log(`[ytdlp] Executing: ${YT_DLP_CMD} ${finalArgs.slice(0, 3).join(' ')} ...`);
 
-    const proc = spawn(YT_DLP_CMD, finalArgs, {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: timeoutMs, 
-    });
+      const proc = spawn(YT_DLP_CMD, finalArgs, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: timeoutMs, 
+      });
 
-    let stdout = '';
-    let stderr = '';
-    
-    const cleanupCookies = () => {
-      if (cookieFilePath && existsSync(cookieFilePath)) {
-        try {
-          unlinkSync(cookieFilePath);
-          console.log(`[ytdlp] Securely deleted temporary cookies file.`);
-        } catch (e) {
-          console.error(`[ytdlp] Failed to clean up cookies file:`, e);
+      let stdout = '';
+      let stderr = '';
+
+      const timer = setTimeout(() => {
+        proc.kill('SIGKILL');
+        reject(new Error('yt-dlp timed out'));
+      }, timeoutMs);
+
+      proc.stdout.on('data', (data) => { stdout += data.toString(); });
+      proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+      proc.on('close', (code) => {
+        clearTimeout(timer);
+        console.log(`[ytdlp] Execution finished with exit code: ${code}`);
+        if (stdout) console.log(`[ytdlp] STDOUT (snippet): ${stdout.substring(0, 300)}...`);
+        if (stderr) console.error(`[ytdlp] STDERR (snippet): ${stderr.substring(0, 300)}...`);
+
+        if (code === 0) {
+          resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+        } else {
+          const error = new Error(`yt-dlp exited with code ${code}. Stderr: ${stderr}`);
+          error.code = code;
+          reject(error);
         }
-      }
-    };
+      });
 
-    const timer = setTimeout(() => {
-      proc.kill('SIGKILL');
-      cleanupCookies();
-      reject(new Error('yt-dlp timed out'));
-    }, timeoutMs);
-
-    proc.stdout.on('data', (data) => { stdout += data.toString(); });
-    proc.stderr.on('data', (data) => { stderr += data.toString(); });
-
-    proc.on('close', (code) => {
-      clearTimeout(timer);
-      cleanupCookies();
-      console.log(`[ytdlp] Execution finished with exit code: ${code}`);
-      if (stdout) console.log(`[ytdlp] STDOUT (snippet): ${stdout.substring(0, 300)}...`);
-      if (stderr) console.error(`[ytdlp] STDERR (snippet): ${stderr.substring(0, 300)}...`);
-
-      if (code === 0) {
-        resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
-      } else {
-        const error = new Error(`yt-dlp exited with code ${code}. Stderr: ${stderr}`);
-        error.code = code;
-        reject(error);
-      }
+      proc.on('error', (err) => {
+        clearTimeout(timer);
+        console.error(`[ytdlp] Spawn error executing ${YT_DLP_CMD}:`, err);
+        reject(err);
+      });
     });
-
-    proc.on('error', (err) => {
-      clearTimeout(timer);
-      cleanupCookies();
-      console.error(`[ytdlp] Spawn error executing ${YT_DLP_CMD}:`, err);
-      reject(err);
-    });
-  });
+  } catch (err) {
+    if (!isRetry) {
+      console.warn(`[ytdlp] Command failed, retrying with android player client...`);
+      return await runYtDlp(args, timeoutMs, true);
+    }
+    throw err;
+  }
 };
 
 // ─── Public API ───────────────────────────────────────────────────────────────
