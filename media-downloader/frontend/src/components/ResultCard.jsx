@@ -115,6 +115,7 @@ export default function ResultCard({ videoInfo, originalUrl }) {
       />
 
       <div
+        className="flex flex-col lg:flex-row relative overflow-hidden"
         style={{
           background: 'linear-gradient(145deg, rgba(14,14,20,0.85) 0%, rgba(8,8,12,0.95) 100%)',
           borderRadius: '32px',
@@ -122,11 +123,6 @@ export default function ResultCard({ videoInfo, originalUrl }) {
           boxShadow: '0 30px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)',
           backdropFilter: 'blur(40px)',
           WebkitBackdropFilter: 'blur(40px)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          position: 'relative',
         }}
       >
         {/* Subtle internal reflection */}
@@ -138,13 +134,7 @@ export default function ResultCard({ videoInfo, originalUrl }) {
         }} />
 
         {/* ── LEFT SIDE: Thumbnail ── */}
-        <div style={{
-          flex: '1 1 350px',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-        }}>
+        <div className="flex-1 w-full lg:basis-[350px] p-6 flex flex-col relative">
           <div 
             onMouseEnter={() => setIsHoveringThumb(true)}
             onMouseLeave={() => setIsHoveringThumb(false)}
@@ -214,13 +204,7 @@ export default function ResultCard({ videoInfo, originalUrl }) {
         </div>
 
         {/* ── RIGHT SIDE: Content & Formats ── */}
-        <div style={{
-          flex: '1.5 1 400px',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}>
+        <div className="flex-[1.5] w-full lg:basis-[400px] p-6 flex flex-col justify-center">
           
           {/* Metadata Header */}
           <div style={{ marginBottom: '16px' }}>

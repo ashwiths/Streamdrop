@@ -222,7 +222,7 @@ export default function Navbar() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             style={{
-              display: 'none', padding: '8px', background: 'none',
+              padding: '8px', background: 'none',
               border: 'none', color: '#fff', cursor: 'pointer',
             }}
             className="flex md:hidden"
