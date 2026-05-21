@@ -103,6 +103,8 @@ const runYtDlp = async (args, timeoutMs = 30000, isRetry = false) => {
   finalArgs.unshift('--cookies', cookiesPath, '--js-runtimes', 'node', '--ffmpeg-location', binDir);
   if (isRetry) {
     finalArgs.push('--extractor-args', 'youtube:player_client=android');
+  } else {
+    finalArgs.push('--extractor-args', 'youtube:player_client=ios');
   }
 
   console.log("Using cookies file:", cookiesPath);
