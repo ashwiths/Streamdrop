@@ -174,17 +174,18 @@ export const downloadToTempFile = async (url, type = 'video', formatId = null, o
     formatSelector = 'bestaudio';
     args.push('--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0');
   } else if (formatId && formatId !== 'best') {
-    formatSelector = `${formatId}+bestaudio[ext=m4a]/${formatId}/best[ext=mp4]/best`;
+    formatSelector = `${formatId}+bestaudio/bestvideo+bestaudio/${formatId}`;
     args.push('--merge-output-format', 'mp4');
   } else {
-    formatSelector = 'best[ext=mp4]/best[ext=webm]/best';
+    formatSelector = 'bestvideo+bestaudio/best';
     args.push('--merge-output-format', 'mp4');
   }
 
-  args.push('-f', formatSelector, '-o', outputPath, url);
+  args.push('-f', formatSelector, '-o', outputPath, url, '--verbose');
 
   console.log(`[ytdlp] Downloading to file: type=${type} format=${formatSelector}`);
   console.log(`[ytdlp] Command: ${YT_DLP_CMD} ${args.join(' ')}`);
+  console.log(`[ytdlp] Expecting FFmpeg execution for merging...`);
 
   return await runYtDlp(args, 180000); // 3 minutes timeout for download and merge
 };
