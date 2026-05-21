@@ -116,12 +116,10 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* Center Nav — Desktop */}
-        <ul style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          listStyle: 'none', margin: 0, padding: 0,
-        }}
-          className="hidden md:flex"
+        {/* Center Nav — Desktop only */}
+        <ul
+          className="hidden md:flex items-center gap-2"
+          style={{ listStyle: 'none', margin: 0, padding: 0 }}
         >
           {NAV_LINKS.map((link) => (
             <li key={link} style={{ position: 'relative' }}>
@@ -168,11 +166,10 @@ export default function Navbar() {
         {/* Right Concept */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           
-          {/* Floating Status Indicator — Desktop */}
-          <div 
-            className="hidden lg:flex"
+          {/* Floating Status Indicator — Desktop only */}
+          <div
+            className="hidden lg:flex items-center"
             style={{
-              alignItems: 'center',
               gap: '8px',
               padding: '6px 14px',
               borderRadius: '999px',
@@ -183,15 +180,15 @@ export default function Navbar() {
               color: 'rgba(255, 255, 255, 0.7)',
             }}
           >
-            <motion.span 
+            <motion.span
               animate={{ opacity: [0.3, 1, 0.3] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               style={{
-                width: '6px',
-                height: '6px',
+                width: '6px', height: '6px',
                 borderRadius: '50%',
                 background: '#10b981',
                 boxShadow: '0 0 8px #10b981',
+                flexShrink: 0,
               }}
             />
             Fast Servers Online

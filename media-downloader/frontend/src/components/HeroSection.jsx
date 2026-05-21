@@ -270,7 +270,7 @@ export default function HeroSection() {
             }}
           >
             {/* Input Form */}
-            <form onSubmit={handleDownload} style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
+            <form onSubmit={handleDownload} className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
               <div style={{ flex: '1 1 250px', position: 'relative' }}>
                 <div style={{
                   position: 'absolute',
@@ -323,6 +323,7 @@ export default function HeroSection() {
                 }}
                 whileTap={{ scale: 0.97 }}
                 type="submit"
+                className="w-full sm:w-auto"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -340,7 +341,6 @@ export default function HeroSection() {
                   fontFamily: "'Space Grotesk', sans-serif",
                   boxShadow: '0 4px 20px rgba(249,115,22,0.35)',
                   transition: 'background 0.3s ease',
-                  flex: '1 1 auto',
                   minWidth: '140px',
                 }}
               >
